@@ -31,4 +31,5 @@ setup(
     packages=find_packages(where='src'),
     python_requires='>=3.5, <4',
     install_requires=[],
+    entry_points={'console_scripts': ['py2uml = py2uml.core:cli']}
 )
