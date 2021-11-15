@@ -1,15 +1,21 @@
 # py2uml
 
+WIP!!!
+
 ## Installation
 
-```bash
-pip install git+https://github.com/mmngreco/py2uml
-```
-
-### Developers
+I recommend using [`pipx`](https://pypa.github.io/pipx/) for installing
+cli-tools like this one.
 
 ```bash
-git clone https://github.com/mmngreco/py2uml
-pip install -e ./py2uml
+pipx install git+https://github.com/mmngreco/py2uml
 ```
+
+## Usage
+
+```bash
+py2uml --help
+py2uml --pkg itertools
+```
+
 
