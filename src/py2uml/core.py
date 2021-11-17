@@ -10,8 +10,7 @@ import inspect
 import re
 from itertools import filterfalse
 
-CLS_TPL = """
-classDiagram
+CLS_TPL = """classDiagram
 
 linkStyle default interpolate basis
 
