@@ -10,12 +10,16 @@ import inspect
 import re
 from itertools import filterfalse
 
-CLS_TPL = """classDiagram
+CLS_TPL = """
+classDiagram
 
 linkStyle default interpolate basis
 
 {links}
 """
+LINK_TPL = "{} <|-- {}"
+ATTRS_TPL = "{}: +{}"
+CHAIN_TPL = "`{}.{}`"
 
 EXCLUDE_METH = [
     "_abc_",
@@ -49,13 +53,35 @@ EXCLUDE_METH = [
 
 
 def class_name(cls):
-    """Return a string representing the class"""
+    """Return a string representing each object.
+
+    Parameters
+    ----------
+    cls : class
+
+    Returns
+    -------
+    out : str
+    """
     # NOTE: can be changed to str(class) for more complete class info
-    out = "%s.%s" % (cls.__module__, cls.__name__)
+    out = CHAIN_TPL.format(cls.__module__, cls.__name__)
     return out
 
 
 def classes_tree(module, base_module=None):
+    """Return inheritances and attributes.
+
+    Parameters
+    ----------
+    module : module
+    base_module : module
+
+    Returns
+    -------
+    module_classes : set
+    inheritances : list
+    module_attrs : list
+    """
 
     if base_module is None:
         base_module = module.__name__
@@ -85,30 +111,72 @@ def classes_tree(module, base_module=None):
 
 
 def get_attrs(module_classes, module_attrs):
+    """Build module's attribute string.
+
+    Parameters
+    ----------
+    module_classes : iterable
+    module_attrs : iterable
+
+    Returns
+    -------
+    out : list
+    """
     attrs_list = []
     for i, cls in enumerate(module_classes):
-        mmd = ["%s: +%s" % (cls, attr) for attr in module_attrs[i]]
+        mmd = [ATTRS_TPL.format(cls, attr) for attr in module_attrs[i]]
         attrs_list.append("\n".join(mmd))
     return attrs_list
 
 
 def classes_tree_to_mermaid(module_classes, inheritances, module_attrs):
+    """Build mermaid diagram.
+
+    Parameters
+    ----------
+    module_classes : iterable
+    inheritances : iterable
+    module_attrs : iterable
+
+    Returns
+    -------
+    out : str
+    """
     attrs = get_attrs(module_classes, module_attrs)
     classes = list(module_classes)
-    members = ["%s <|-- %s" % (a, b) for a, b in inheritances]
+    members = [LINK_TPL.format(a, b) for a, b in inheritances]
     out = CLS_TPL.format(links="\n".join(classes + members + attrs))
     return out
 
 
 def classes_attrs(cls, exclude=EXCLUDE_METH):
+    """Find all class' attribute and process them.
 
+    Remove methods which are in exclude and add paranthesis if it's a
+    function.
+
+    Parameters
+    ----------
+    cls : class
+    exclude : list
+
+    Returns
+    -------
+    out : list
+    """
     all_attr = dir(cls)
+
+    # TODO: better implementation
+    # def is_exclude(elem):
+    #     if elem in exclude:
+    #         return True
+    #     return False
 
     def is_exclude(elem):
         for ex in exclude:
             if ex in elem:
                 return True
-        # return False
+            # return False
 
     def function_formatter(elem):
         if hasattr(getattr(cls, elem), "__call__"):
@@ -121,7 +189,26 @@ def classes_attrs(cls, exclude=EXCLUDE_METH):
     return list(out)
 
 
-def remove_dots(mermaid_str):
+def dot2camel(mermaid_str):
+    """Change dot notation to camel case.
+
+    This is needed as mermaid can't render diagrams when there're dots in a
+    name and it's not possible to escape it.
+
+    Parameters
+    ----------
+    mermaid_str : str
+
+    Returns
+    -------
+    mermaid_str : str
+
+    References
+    ----------
+    * https://github.com/mermaid-js/mermaid/issues/1635
+    * https://github.com/mermaid-js/mermaid/pull/1907
+
+    """
     meth_regex = r"\.(\w)"
 
     def callback(pttn):
@@ -132,12 +219,12 @@ def remove_dots(mermaid_str):
 
 
 def cli():
+    """Run cli."""
     import argparse
 
     parse = argparse.ArgumentParser()
-    parse.add_argument("--pkg", required=True)
-    parse.add_argument("--base-module", default=None)
-    parse.add_argument("--raw", action="store_true")
+    parse.add_argument("--pkg", required=True, help="Package to represent.")
+    parse.add_argument("--base-module", default=None, help="Only this node.")
     args = parse.parse_args()
 
     _pkg = args.pkg
@@ -149,8 +236,4 @@ def cli():
             pkg, base_module=base_module
     )
     class_diagram = classes_tree_to_mermaid(m_classes, inheritances, m_attrs)
-
-    if raw:
-        print(class_diagram)
-    else:
-        print(remove_dots(class_diagram))
+    print(class_diagram)
